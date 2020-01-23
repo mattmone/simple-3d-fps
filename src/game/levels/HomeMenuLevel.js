@@ -1,5 +1,10 @@
-import UI from '../../base/UI';
-import Level from '../../base/Level';
+import {
+  FreeCamera,
+  Vector3,
+  Color4
+} from '../../../web_modules/@babylonjs/core.js';
+import UI from '../../base/UI.js';
+import Level from '../../base/Level.js';
 
 export default class HomeMenuLevel extends Level {
 
@@ -9,10 +14,10 @@ export default class HomeMenuLevel extends Level {
 
     buildScene() {
 
-        var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), this.scene);
+        var camera = new FreeCamera("camera1", new Vector3(0, 5, -10), this.scene);
 
         // Make this scene transparent to see the document background
-        this.scene.clearColor = new BABYLON.Color4(0,0,0,0);
+        this.scene.clearColor = new Color4(0,0,0,0);
  
         var menu = new UI('homeMenuUI');
         

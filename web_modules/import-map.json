@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "@babylonjs/core": "./@babylonjs/core.js",
+    "@babylonjs/gui": "./@babylonjs/gui.js",
+    "@babylonjs/loaders": "./@babylonjs/loaders.js",
+    "@babylonjs/procedural-textures": "./@babylonjs/procedural-textures.js",
+    "rot-js": "./rot-js.js"
+  }
+}

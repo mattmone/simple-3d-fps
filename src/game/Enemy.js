@@ -1,3 +1,7 @@
+import {
+  Tags,
+  Vector3
+} from '../../web_modules/@babylonjs/core.js';
 export default class Enemy {
 
     constructor(level) {
@@ -20,18 +24,17 @@ export default class Enemy {
     }
 
     create() {
-        
         this.mesh = this.level.assets.getMesh('enemy').clone();
         this.mesh.enemyObject = this;
         this.mesh.checkCollisions = true;
         
-        BABYLON.Tags.AddTagsTo(this.mesh, 'enemy');
+        Tags.AddTagsTo(this.mesh, 'enemy');
 
         this.mesh.position.x = Math.floor((Math.random() * 100)) - 50;
         this.mesh.position.z = Math.floor((Math.random() * 100)) - 50;
         this.mesh.position.y = this.defaultAltitude;
 
-        this.mesh.scaling = new BABYLON.Vector3(0.25, 0.25, 0.25);
+        this.mesh.scaling = new Vector3(0.25, 0.25, 0.25);
         
         this.generateRandomPosition();
 
@@ -109,7 +112,7 @@ export default class Enemy {
         let randomPositionZ = Math.floor((Math.random() * this.maxDistanceFromCenter)) - (this.maxDistanceFromCenter / 2);
         // let altitude = Math.floor(Math.random() * 7);
 
-        this.randPosition = new BABYLON.Vector3(randomPositionX, this.defaultAltitude, randomPositionZ);
+        this.randPosition = new Vector3(randomPositionX, this.defaultAltitude, randomPositionZ);
     }
 
     destroy() {

@@ -1,13 +1,11 @@
+import { Engine } from '../web_modules/@babylonjs/core.js';
 // Base
-import Log from './base/Log.js';
 import Helper from './base/Helper.js';
 
 // Game Levels
-import FirstLevel from './game/levels/FirstLevel.js';
-import CreditsLevel from './game/levels/CreditsLevel.js';
 import HomeMenuLevel from './game/levels/HomeMenuLevel.js';
 
-export default class Game {
+export class Game {
 
     constructor(options = {}) {
 
@@ -27,11 +25,6 @@ export default class Game {
         this.paused = false;
 
         /**
-         * Can be used to log objects and debug the game
-         */
-        this.log = new Log();
-
-        /**
          * Helper methods
          */
         this.helper = new Helper();
@@ -41,22 +34,28 @@ export default class Game {
          */
         this.canvas = document.getElementById("renderCanvas");
 
-        this.engine = new BABYLON.Engine(this.canvas, true);
+        this.engine = new Engine(this.canvas, true);
 
         this.currentLevel = null;
         this.currentLevelName = 'HomeMenuLevel';
-
         this.levels = {
-            'HomeMenuLevel': new HomeMenuLevel(),
-            'CreditsLevel': new CreditsLevel(),
-            'FirstLevel': new FirstLevel()
+            'HomeMenuLevel': async _ => new HomeMenuLevel(),
+            'CreditsLevel': async _ => {
+              const { CreditsLevel } = await import('./game/levels/CreditsLevel.js')
+              return new CreditsLevel();
+             },
+            'FirstLevel': async _ => {
+              const { FirstLevel } = await import('./game/levels/FirstLevel.js')
+              return new FirstLevel();
+             }
         };
 
     }
-
+    init() {
+      
+    }
     start() {
         this.listenKeys();
-        this.lintenTouchEvents();
         this.startLevel();
         this.listenOtherEvents();
     }
@@ -111,45 +110,6 @@ export default class Game {
         }
     }
 
-    lintenTouchEvents() {
-        if(typeof(Hammer) == 'undefined') return;
-
-        var hammertime = new Hammer(document.body);
-        hammertime.get('swipe').set({ direction: Hammer.DIRECTION_ALL });
-
-        hammertime.on('swipeup', (ev) => {
-            this.keys.up = 1;
-
-            // Resets the key after some milleseconds
-            setTimeout(() => {
-                this.keys.up = 0;
-            }, 150);
-        });
-
-        hammertime.on('swipedown', (ev) => {
-            this.keys.down = 1;
-
-            setTimeout(() => {
-                this.keys.down = 0;
-            }, 100);
-        });
-
-        hammertime.on('swipeleft', (ev) => {
-            this.keys.left = 2;
-            
-            setTimeout(() => {
-                this.keys.left = 0;
-            }, 150);
-        });
-
-        hammertime.on('swiperight', (ev) => {
-            this.keys.right = 2;
-
-            setTimeout(() => {
-                this.keys.right = 0;
-            }, 150);
-        });
-    }
 
     listenOtherEvents() {
         window.addEventListener('blur', () => {
@@ -180,9 +140,9 @@ export default class Game {
         this.startLevel();
     }
 
-    startLevel() {
+    async startLevel() {
 
-        this.currentLevel = this.levels[this.currentLevelName];
+        this.currentLevel = await this.levels[this.currentLevelName]();
         this.currentLevel.start();
 
     }

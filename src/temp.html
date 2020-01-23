@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  
+
+
+<script type='module'>
+  
+  import {  RNG,
+            Map,
+            Display,
+            Util,
+            FOV } from '../web_modules/rot-js.js';
+RNG.setSeed(1234);
+let height = 100;
+let width = 100;
+var map = new Map.Uniform(width, height, {roomHeight: [height/10, height/5], roomWidth: [width/10, width/5], roomDugPercentage: 0.5}).create((x, y, type) => {
+  console.log(x, y, type);
+});
+console.log(map);
+
+var display = new Display({width: width, height: height, fontSize:8});
+SHOW(display.getContainer());
+map.create(display.DEBUG);
+var color = 255;
+var colorStep = 0;
+
+let verticies = [];
+let rooms = map.getRooms().map(roomVerticies);
+// SHOW(JSON.stringify(rooms)+",");
+
+let corridors = map.getCorridors().map(corridor => {
+  let [sx, sy, ex, ey] = [corridor._startX, corridor._startY, corridor._endX, corridor._endY];
+  let points = [];
+  points.push(sx, sy);
+  if(sx == ex && sy == ey) {
+    points.push(sx, sy-2);
+    points.push(sx-2, sy-2);
+    points.push(sx-2, sy);
+  } else {
+    
+    if(ex > sx) {
+      points.push(ex, ey);
+      points.push(ex, ey-2);
+      points.push(sx, sy-2);
+    }
+    if(ex < sx) {
+      points.push(sx, sy-2);
+      points.push(ex, ey-2);
+      points.push(ex, ey);
+    }
+    if(ey > sy) {
+      points.push(sx-2, sy);
+      points.push(ex-2, ey);
+      points.push(ex, ey);
+    }
+    if(ey < sy) {
+      points.push(sx+2, sy);
+      points.push(ex+2, ey);
+      points.push(ex, ey);
+    }
+    
+  }
+  return points;
+})
+// SHOW(JSON.stringify(corridors)+",");
+
+let verticiesPool = [...rooms.flat(), ...corridors.flat()].map((v, i, all) => (i+1)%2 === 0 ?false : [v, all[i+1]]).filter(v => v);
+
+// SHOW(JSON.stringify(verticiesPool));
+//starting at top left of a room
+console.log(verticiesPool.filter(v => v[1] === 67));
+verticies.push(verticiesPool.shift());
+let lastDirection = 'left';
+let vertexIterations = 0;
+do {
+  let [vertexIndex, direction] = findNextEntry(verticies[verticies.length-1], lastDirection, verticiesPool);
+  if(vertexIndex > -1);
+    verticies.push(verticiesPool.splice(vertexIndex, 1)[0]);
+  lastDirection = direction;
+  vertexIterations++;
+} while(verticiesPool.length > 0 && vertexIterations < verticiesPool.length);
+SHOW(JSON.stringify(verticies.flat()));
+
+function convertMapToDungo(rotMap) {
+
+
+}
+function findNextEntry(lastVertex, fromDirection, pool) {
+  let nextVertex, direction, checkIteration = 0;
+  do {
+    [nextVertex, direction] = checkForVertex(lastVertex, direction || fromDirection, pool);
+    checkIteration++;
+  } while(!nextVertex && checkIteration < 5);
+  let index = pool.indexOf(nextVertex);
+  return [index, direction];
+}
+function checkForVertex(origin, from, pool) {
+  let foundVertex;
+  if(['left', 'right'].includes(from)) {
+    let subPool = pool.filter(v => v[1] === origin[1]);
+    if(subPool.length > 0) {
+      if(from === 'left') {
+        subPool = subPool.filter(v => v[0] < origin[0])
+        subPool.sort((a, b) => b[0] - a[0]);
+      } else {
+        subPool = subPool.filter(v => v[0] > origin[0])
+        subPool.sort((a, b) => a[0] - b[0]);
+      } 
+    }
+    foundVertex = subPool[0];
+  } else {
+    let subPool = pool.filter(v => v[0] === origin[0]);
+    if(subPool.length > 0) {
+      if(from === 'up') {
+        subPool = subPool.filter(v => v[1] < origin[1])
+        subPool.sort((a, b) => b[1] - a[1]);
+      } else {
+        subPool = subPool.filter(v => v[1] > origin[1])
+        subPool.sort((a, b) => a[1] - b[1]);
+      } 
+    }
+    foundVertex = subPool[0];
+  }
+  let nextDirection = from;
+  switch(from) {
+    case 'left':
+      nextDirection = foundVertex ? 'up' : 'down';
+      break;
+    case 'down':
+      nextDirection = foundVertex ? 'left' : 'right';
+      break;
+    case 'right':
+      nextDirection = foundVertex ? 'down' : 'up';
+      break;
+    case 'up':
+      nextDirection = foundVertex ? 'right' : 'left';
+      break;
+  }
+  // console.log(from, nextDirection, origin, foundVertex);
+  return [foundVertex, nextDirection];
+}
+
+function doorVerticies(room, wall) {
+  let verticies = [];
+  let roomDoors = getDoors(room);
+  const doorModifier = ['left', 'top'].includes(wall) ? -1 : 1;
+  const doorIndex = ['left', 'right'].includes(wall) ? 0 : 1;
+  const opposingDoor = (doorIndex + 1) % 2;
+  let primarySide = "getLeft";
+  let secondarySide = "getBottom";
+  switch(wall) {
+    case "bottom":
+      primarySide = "getBottom";
+      secondarySide = "getRight";
+      break;
+    case "right":
+      primarySide = "getRight";
+      secondarySide = "getTop";
+      break;
+    case "top":
+      primarySide = "getTop";
+      secondarySide = "getLeft";
+      break;
+  }
+  let wallDoors = roomDoors.filter(d => d[doorIndex] === room[primarySide]()-1);
+  if(wallDoors.length > 0) {
+    wallDoors.forEach(door => {
+      if(door[1] === room.getTop()) {
+        verticies.push(
+          door[0], door[1],
+          door[0]+(2*doorModifier*doorIndex), door[1]+(2*doorModifier*opposingDoor),
+          room[primarySide](), door[1]+(2*doorModifier*opposingDoor)
+        )
+      } else if (door[opposingDoor] === room[secondarySide]()) {
+        verticies.push(
+          room[primarySide](), door[1]-(2*doorModifier*opposingDoor),
+          door[0]-(2*doorModifier*doorIndex), door[1]-(2*doorModifier*opposingDoor),
+          door[0], door[1]
+        )
+      } else verticies.push(
+          room[primarySide](), door[1]-(1*doorModifier*opposingDoor),
+          door[0]+(1*doorModifier*doorIndex), door[1]+(1*doorModifier*opposingDoor),
+          door[0]-(1*doorModifier*doorIndex), door[1]-(1*doorModifier*opposingDoor),
+          room[primarySide](), door[1]+(1*doorModifier*opposingDoor)
+        );
+    })
+  }
+  return verticies;
+}
+
+function roomVerticies(room) {
+  let doors = getDoors(room);
+  let verticies = [];
+  verticies.push(room.getLeft(), room.getTop());
+  {
+    let doorVerticiesTemp = [];
+    let leftDoors = doors.filter(d => d[0] === room.getLeft()-1);
+    if(leftDoors.length > 0) {
+      leftDoors.forEach(door => {
+        if(door[1] === room.getTop()) {
+          doorVerticiesTemp.push(
+            door[0], door[1],
+            door[0], door[1]+2,
+            room.getLeft(), door[1]+2
+          )
+        } else if (door[1] === room.getBottom()) {
+          doorVerticiesTemp.push(
+            room.getLeft(), door[1]-2,
+            door[0], door[1]-2,
+            door[0], door[1]
+          )
+        } else {
+          if(door[1]-2 !== room.getTop()) doorVerticiesTemp.push(room.getLeft(), door[1]-2);
+          doorVerticiesTemp.push(
+            door[0], door[1]-2,
+            door[0], door[1]
+          );
+          if(door[1] !== room.getBottom())doorVerticiesTemp.push(room.getLeft(), door[1]);
+        }
+      });
+      verticies.push(...doorVerticiesTemp);
+    }
+  }
+  verticies.push(room.getLeft(), room.getBottom());
+  {
+    let bottomDoors = doors.filter(d => d[1] === room.getBottom()+1);
+    if(bottomDoors.length > 0) {
+      bottomDoors.forEach(door => {
+        if(door[0] === room.getLeft() || door[0] === room.getLeft()+1) {
+          verticies.push(
+            door[0], door[1],
+            door[0]+2, door[1],
+            door[0]+2, room.getBottom()
+          )
+        } else if (door[0] === room.getRight() || door[0] === room.getRight()-1) {
+          verticies.push(
+            door[0]-2, room.getBottom(),
+            door[0]-2, door[1],
+            door[0], door[1]
+          )
+        } else {
+          if(door[0]-2 !== room.getLeft()) verticies.push(door[0]-2, room.getBottom());
+          verticies.push(
+            door[0]-2, door[1],
+            door[0], door[1]
+          );
+          if(door[0] !== room.getRight()) verticies.push(door[0], room.getBottom());
+        }
+      })
+    }
+  }
+  verticies.push(room.getRight(), room.getBottom());
+  {
+    let doorVerticiesTemp = [];
+    let leftDoors = doors.filter(d => d[0] === room.getRight()+1);
+    if(leftDoors.length > 0) {
+      leftDoors.forEach(door => {
+        if(door[1] === room.getTop()) {
+          doorVerticiesTemp.push(
+            room.getRight(), door[1]+2,
+            door[0], door[1]+2,
+            door[0], door[1]
+          )
+        } else if (door[1] === room.getBottom()) {
+          doorVerticiesTemp.push(
+            door[0], door[1],
+            door[0], door[1]-2,
+            room.getRight(), door[1]-2
+          )
+        } else {
+          if(door[1] !== room.getTop()) doorVerticiesTemp.push(room.getRight(), door[1]);
+          doorVerticiesTemp.push(
+            door[0], door[1],
+            door[0], door[1]-2
+            );
+            if(door[1]-2 !== room.getBottom()) doorVerticiesTemp.push(room.getRight(), door[1]-2);
+        }
+      });
+      verticies.push(...doorVerticiesTemp);
+    }
+  }
+  verticies.push(room.getRight(), room.getTop());
+  {
+    let bottomDoors = doors.filter(d => d[1] === room.getTop()-1);
+    if(bottomDoors.length > 0) {
+      bottomDoors.forEach(door => {
+        if(door[0] === room.getRight() || door[0] === room.getRight()-1) {
+          verticies.push(
+            door[0]-2, room.getTop(),
+            door[0]-2, door[1],
+            door[0], door[1]
+          )
+        } else if (door[0] === room.getLeft() || door[0] === room.getLeft()+1) {
+          verticies.push(
+            door[0], door[1],
+            door[0]+2, door[1],
+            door[0]+2, room.getTop()
+          )
+        } else {
+          if(door[0] !== room.getRight()) verticies.push(door[0], room.getTop());
+          verticies.push(
+            door[0], door[1],
+            door[0]-2, door[1]
+          );
+          if(door[0]-2 !== room.getLeft()) verticies.push(door[0]-2, room.getTop());
+        }
+      })
+    }
+  }
+  return verticies;
+}
+
+function getDoors(room) {
+  return Object.keys(room._doors).map(door => door.split(',').map(vertex => parseInt(vertex, 10)));
+}
+
+function corridorAlongWall(corridors, axis, currentRoom) {
+  const doors = getDoors(currentRoom)
+  axis = axis.toUpperCase();
+  let opposingAxis = axis.toUpperCase() === "X" ? "Y" : "X";
+  let match = corridors.filter(corr => {
+    return (corr[`_start${axis}`]-1 <= value && value <= corr[`_start${axis}`]+1 && start <= corr[`_start${opposingAxis}`] &&  corr[`_start${opposingAxis}`] <= end)
+  })[0];
+  if(!match) return;
+  let [corr] = corridors.splice(corridors.indexOf(match), 1);
+  if(!corr) return false;
+  let verticies = corridorVerticies(corr);
+  let runTimes = 0;
+  do {
+    corr = checkConjoininCorridor(corridors, corr);
+    if(corr) verticies.push(...corridorVerticies(corr));
+    runTimes += 1;
+  } while (corr && runTimes <= 10);
+  return verticies;
+}
+function checkConjoininCorridor(corridors, corridor) {
+  let match = corridors.filter(corr => {
+    let res = corr._startX-1 <= corridor._endX && corr._startX+1 >= corridor._endX && corr != corridor && corr._startY == corridor._endY;
+    return res;
+  })[0];
+  if(match) {
+    let [corr] = corridors.splice(corridors.indexOf(match), 1);
+    if(corr) return corr;
+  }
+  match = corridors.filter(corr => corr._startY-1 <= corridor._endY && corr._startY+1 >= corridor._endY && corr._startX == corridor._endX)[0];
+  if(match) {
+    let [corr] = corridors.splice(corridors.indexOf(), 1);
+    if(corr) return corr;
+  }
+  return false;
+}
+function corridorVerticies(corridor) {
+  return [
+    [corridor._startX, corridor._startY],
+    [corridor._endX, corridor._endY]
+  ]
+}
+function checkIfNewRoom(rooms, verticies) {
+  const [lastX, lastY] = Array.from(verticies)[verticies.length-1];
+  
+  let [room] = rooms.filter(room => {
+    return between(lastX, room.getLeft()-2, room.getRight()+2, true) && between(lastY, room.getTop()-2, room.getBottom()+2, true);
+  });
+  if(room) return room;
+  return false;
+}
+
+function between(number, a, b, inclusive) {
+  const min = Math.min(a, b),
+        max = Math.max(a, b);
+
+  return inclusive ? number >= min && number <= max : number > min && number < max;
+}
+function SHOW() { 
+  for (var i=0;i<arguments.length;i++) {
+    var arg = arguments[i];
+    if (!arg.nodeType) {
+      let div = document.createElement("div");
+      div.innerHTML = arg;
+      arg = div;
+    }
+    document.body.appendChild(arg);
+  }
+}
+function drawDoor([x, y]) {
+  display.draw(x, y, "", "", `rgb(${color},0,0)`);
+  color -= colorStep;
+}
+</script>
+
+</body>
+</html>

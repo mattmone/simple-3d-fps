@@ -1,10 +1,30 @@
-import Enemy from '../Enemy';
-import UI from '../../base/UI';
-import Weapon from '../Weapon';
-import Player from '../Player';
-import Level from '../../base/Level';
+import {
+  PointLight,
+  Vector3,
+  MeshBuilder,
+  StandardMaterial,
+  Texture,
+  Mesh,
+  Color3,
+  UniversalCamera,
+  SpriteManager,
+  Sprite
+} from '../../../web_modules/@babylonjs/core.js';
+import {
+  RoadProceduralTexture
+} from '../../../web_modules/@babylonjs/procedural-textures.js';
+import * as GUI from '../../../web_modules/@babylonjs/gui.js';
+import Enemy from '../Enemy.js';
+import UI from '../../base/UI.js';
+import Weapon from '../Weapon.js';
+import Player from '../Player.js';
+import Level from '../../base/Level.js';
+import {
+  RNG,
+  Map
+} from '../../../web_modules/rot-js.js';
 
-export default class FirstLevel extends Level {
+export class FirstLevel extends Level {
 
     setProperties() {
 
@@ -27,45 +47,28 @@ export default class FirstLevel extends Level {
     }
 
     setupAssets() {
-
-        this.assets.addAnimatedMesh('rifle', '/assets/models/weapons/rifle/rifle.gltf', {
+        this.assets.addAnimatedMesh('rifle', '/src/assets/models/weapons/rifle/rifle.gltf', {
             'normalized': true, // Normalize all rifle animations
             'start': 0,
             'end': 207
         });
         
-        this.assets.addMergedMesh('enemy', '/assets/models/skull/skull2.obj');
+        this.assets.addMergedMesh('enemy', '/src/assets/models/skull/skull2.obj');
 
-        this.assets.addMusic('music', '/assets/musics/music.mp3', {volume: 0.1});
-        this.assets.addSound('shotgun', '/assets/sounds/shotgun.wav', { volume: 0.4 });
-        this.assets.addSound('reload', '/assets/sounds/reload.mp3', { volume: 0.4 });
-        this.assets.addSound('empty', '/assets/sounds/empty.wav', { volume: 0.4 });
-        this.assets.addSound('monsterAttack', '/assets/sounds/monster_attack.wav', { volume: 0.3 });
-        this.assets.addSound('playerDamaged', '/assets/sounds/damage.wav', { volume: 0.3 });
+        this.assets.addMusic('music', '/src/assets/musics/music.mp3', {volume: 0.1});
+        this.assets.addSound('shotgun', '/src/assets/sounds/shotgun.wav', { volume: 0.4 });
+        this.assets.addSound('reload', '/src/assets/sounds/reload.mp3', { volume: 0.4 });
+        this.assets.addSound('empty', '/src/assets/sounds/empty.wav', { volume: 0.4 });
+        this.assets.addSound('monsterAttack', '/src/assets/sounds/monster_attack.wav', { volume: 0.3 });
+        this.assets.addSound('playerDamaged', '/src/assets/sounds/damage.wav', { volume: 0.3 });
         
     }
 
     buildScene() {
         
-        this.scene.clearColor = new BABYLON.Color3.FromHexString('#777');
+        this.scene.clearColor = new Color3.FromHexString('#777');
         
-        // Adding lights
-        let dirLight = new BABYLON.DirectionalLight("DirectionalLight", new BABYLON.Vector3(0, -1, 0), this.scene);
-        dirLight.intensity = 0.3;
-
-        let hemiLight = new BABYLON.HemisphericLight("HemiLight", new BABYLON.Vector3(0, 1, 0), this.scene);
-        hemiLight.intensity = 0.5;
-
-        // Skybox
-        var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size: 1000}, this.scene);
-        var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", this.scene);
-        skyboxMaterial.backFaceCulling = false;
-        skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("assets/skybox/skybox", this.scene);
-        skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
-        skyboxMaterial.disableLighting = true;
-        skybox.material = skyboxMaterial;	
-
-        this.scene.gravity = new BABYLON.Vector3(0, -9.81, 0);
+        this.scene.gravity = new Vector3(0, -9.81, 0);
         this.scene.collisionsEnabled = true;
 
         // Create and set the active camera
@@ -74,6 +77,7 @@ export default class FirstLevel extends Level {
         this.enablePointerLock();
         
         this.createGround();
+        this.createWall();
         this.addWeapon();
         
         this.addEnemies();
@@ -91,14 +95,26 @@ export default class FirstLevel extends Level {
     }
 
     createGround() {
-        let ground = BABYLON.Mesh.CreateGround('ground',  500,  500, 2, this.scene);
+        let ground = Mesh.CreateGround('ground',  1000,  1000, 2, this.scene);
         ground.checkCollisions = true;
         
-        let groundMaterial = new BABYLON.StandardMaterial('groundMaterial', this.scene);
-        groundMaterial.diffuseTexture = new BABYLON.Texture('/assets/images/sand.jpg', this.scene);
-        groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        let groundMaterial = new StandardMaterial('groundMaterial', this.scene);
+        groundMaterial.diffuseTexture = new Texture('/src/assets/images/sand.jpg', this.scene);
+        groundMaterial.specularColor = new Color3(0, 0, 0);
 
         ground.material = groundMaterial;
+    }
+    createWall(start, end) {
+
+      let wall = MeshBuilder.CreateBox('wall', {height: 50, width: 1000, depth: 8}, this.scene);
+      wall.checkCollisions = true;
+
+      let wallMaterial = new StandardMaterial('wallMaterial', this.scene);
+      let wallTexture = new RoadProceduralTexture('wallTexture', 1024, this.scene);
+      wallMaterial.diffuseTexture = wallTexture;
+      wall.material = wallMaterial;
+      wall.rotation.y = Math.PI/180 * 90;
+      wall.position = new Vector3(500, 0, 0);
     }
 
     addWeapon() {
@@ -146,7 +162,7 @@ export default class FirstLevel extends Level {
     createHUD() {
         var hud = new UI('levelUI');
         
-        hud.addImage('gunsight', '/assets/images/gunsight.png', {
+        hud.addImage('gunsight', '/src/assets/images/gunsight.png', {
             'width': 0.05,
             'height': 0.05
         });
@@ -154,19 +170,19 @@ export default class FirstLevel extends Level {
         this.lifeTextControl = hud.addText('Life: ' + this.playerLife, {
             'top': '10px',
             'left': '10px',
-            'horizontalAlignment': BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT
+            'horizontalAlignment': GUI.Control.HORIZONTAL_ALIGNMENT_LEFT
         });
 
         this.ammoTextControl = hud.addText('Ammo: ' + this.weapon.ammo, {
             'top': '10px',
             'left': '10px',
-            'horizontalAlignment': BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER
+            'horizontalAlignment': GUI.Control.HORIZONTAL_ALIGNMENT_CENTER
         });
 
         this.hitsTextControl = hud.addText('Hits: ' + this.player.hits, {
             'top': '10px',
             'left': '-10px',
-            'horizontalAlignment': BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT
+            'horizontalAlignment': GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT
         });
     }
 
@@ -177,26 +193,26 @@ export default class FirstLevel extends Level {
             'top': '-200px',
             'outlineWidth': '2px',
             'fontSize': '40px',
-            'verticalAlignment': BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER
+            'verticalAlignment': GUI.Control.VERTICAL_ALIGNMENT_CENTER
         });
 
         this.currentRecordTextControl = this.menu.addText('Current Record: 0', {
             'top': '-150px',
-            'verticalAlignment': BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER
+            'verticalAlignment': GUI.Control.VERTICAL_ALIGNMENT_CENTER
         });
 
         this.hasMadeRecordTextControl = this.menu.addText('You got a new Points Record!', {
             'top': '-100px',
             'color': GAME.options.recordTextColor,
             'fontSize': '20px',
-            'verticalAlignment': BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER
+            'verticalAlignment': GUI.Control.VERTICAL_ALIGNMENT_CENTER
         });
 
         this.gameOverTextControl = this.menu.addText('GAME OVER', {
             'top': '-60px',
             'color': GAME.options.recordTextColor,
             'fontSize': '25px',
-            'verticalAlignment': BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER
+            'verticalAlignment': GUI.Control.VERTICAL_ALIGNMENT_CENTER
         });
 
         this.menu.addButton('replayButton', 'Replay Game', {
@@ -212,13 +228,13 @@ export default class FirstLevel extends Level {
     }
 
     createCamera() {
-        var camera = new BABYLON.UniversalCamera("UniversalCamera", new BABYLON.Vector3(0, 3.5, 100), this.scene);
-        camera.setTarget(new BABYLON.Vector3(0,2,0));
+        var camera = new UniversalCamera("UniversalCamera", new Vector3(0, 3.5, 100), this.scene);
+        camera.setTarget(new Vector3(0,2,0));
         
         camera.attachControl(GAME.canvas, true);
         
         camera.applyGravity = true;
-        camera.ellipsoid = new BABYLON.Vector3(1, 1.7, 1);
+        camera.ellipsoid = new Vector3(1, 1.7, 1);
         camera.checkCollisions = true;
         camera._needMoveForGravity = true;
 
@@ -238,7 +254,6 @@ export default class FirstLevel extends Level {
         camera.speed = 17;
         
         camera.onCollide = (collidedMesh) => {
-            // If the camera collides with the ammo box
             if(collidedMesh.id == 'ammoBox') {
                 this.weapon.reload();
                 collidedMesh.dispose();
@@ -277,7 +292,7 @@ export default class FirstLevel extends Level {
     }
 
     addAmmoBox() {
-        this.ammoBox = BABYLON.MeshBuilder.CreateBox(
+        this.ammoBox = MeshBuilder.CreateBox(
             'ammoBox', 
             { 'width': 4, 'height': 2, 'depth': 2 }, 
             this.scene
@@ -290,8 +305,8 @@ export default class FirstLevel extends Level {
         this.ammoBox.checkCollisions = true;
         
         // Let's add a green arrow to show where is the ammo box
-        var arrowSpriteManager = new BABYLON.SpriteManager('arrowSpriteManager','assets/images/arrow.png', 1, 256, this.scene);
-        this.ammoBox.arrow = new BABYLON.Sprite('arrow', arrowSpriteManager);
+        var arrowSpriteManager = new SpriteManager('arrowSpriteManager','assets/images/arrow.png', 1, 256, this.scene);
+        this.ammoBox.arrow = new Sprite('arrow', arrowSpriteManager);
         this.ammoBox.arrow.position.y = 5;
         this.ammoBox.arrow.size = 4;
     }
@@ -344,7 +359,7 @@ export default class FirstLevel extends Level {
         GAME.resume();
         this.menu.hide();
 
-        this.camera.position = new BABYLON.Vector3(0, 3.5, 100);
+        this.camera.position = new Vector3(0, 3.5, 100);
         this.weapon.reload();
         this.addEnemies();
 
@@ -355,6 +370,19 @@ export default class FirstLevel extends Level {
         if(!GAME.isPaused()) {
             this.weapon.controlFireRate();
             this.enemies.forEach(enemy => enemy.move());
+            if(!this.light) {
+              this.light = new PointLight("pointLight", this.camera.position, this.scene);
+              this.light.intensity = 0.5;
+              this.light.range = 100;
+              this.light.specular = new Color3(1, 0.2, 0);
+              this.light.diffuse = new Color3(1, 0.5, 0);
+              this.frame = 0;
+            } else {
+              this.light.position = this.camera.position;
+              this.frame++;
+              if(this.frame % 20 === 0)
+                this.light.diffuse = new Color3(1, (Math.random()*0.3)+0.4, 0);
+            }
 
             if(this.camera.position.y < -20) {
                 this.gameOver();

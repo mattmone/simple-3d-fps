@@ -1,4 +1,4 @@
-window.initialGameOptions = {
+export const initialGameOptions = {
     
     /**
      * Main Options

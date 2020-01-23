@@ -1,3 +1,9 @@
+import {
+  TransformNode,
+Vector3,
+Tags,
+Mesh
+} from '../../web_modules/@babylonjs/core.js';
 export default class Weapon {
     
     constructor(level) {
@@ -31,11 +37,11 @@ export default class Weapon {
         // Let's use a transform node to never lose the correct mesh orientation
         // It we apply transformations directly to the mesh, It can be mirrored,
         // removinf the handedness conversion
-        let transformNode = new BABYLON.TransformNode('weaponTransformNode');
+        let transformNode = new TransformNode('weaponTransformNode');
         
         transformNode.parent = this.level.camera; 
-        transformNode.scaling = new BABYLON.Vector3(3.5, 3.5, 3.5);
-        transformNode.position = new BABYLON.Vector3(0.7,-0.45,1.1);
+        transformNode.scaling = new Vector3(3.5, 3.5, 3.5);
+        transformNode.position = new Vector3(0.7,-0.45,1.1);
         
         this.mesh.parent = transformNode;
         
@@ -74,13 +80,13 @@ export default class Weapon {
             this.level.updateStats();
             
             // If we hit an enemy
-            if (pickInfo.hit && BABYLON.Tags.HasTags(pickInfo.pickedMesh) 
+            if (pickInfo.hit && Tags.HasTags(pickInfo.pickedMesh) 
             && pickInfo.pickedMesh.matchesTagsQuery('enemy')) {
                 let mainMesh = (pickInfo.pickedMesh.parent) ? pickInfo.pickedMesh.parent : pickInfo.pickedMesh;
                 mainMesh.enemyObject.destroy();
             } else {
                 if(pickInfo.pickedPoint) {
-                    let box = BABYLON.Mesh.CreateBox('box', 0.1, this.scene);
+                    let box = Mesh.CreateBox('box', 0.1, this.scene);
                     box.position = pickInfo.pickedPoint.clone();
                 }
             }

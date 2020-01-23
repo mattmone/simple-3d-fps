@@ -1,12 +1,13 @@
 // The Game main class
-import Game from './Game.js';
-
-window.GAME = null;
+import { Game } from './Game.js';
+import Log from './base/Log.js';
+import { initialGameOptions } from './options.js';
 
 var app = {
 
     init() {
-        GAME = new Game(window.initialGameOptions);
+        window.GAME = new Game(initialGameOptions);
+        GAME.log = new Log();
         GAME.start();
     }
 
